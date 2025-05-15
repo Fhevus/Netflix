@@ -56,37 +56,23 @@ GROUP BY 1;
 ### 2. Find the Most Common Rating for Movies and TV Shows
 
 ```sql
-WITH RatingCounts AS (
-    SELECT 
-        type,
-        rating,
-        COUNT(*) AS rating_count
-    FROM netflix
-    GROUP BY type, rating
-),
-RankedRatings AS (
-    SELECT 
-        type,
-        rating,
-        rating_count,
-        RANK() OVER (PARTITION BY type ORDER BY rating_count DESC) AS rank
-    FROM RatingCounts
-)
 SELECT 
-    type,
-    rating AS most_frequent_rating
-FROM RankedRatings
-WHERE rank = 1;
+        type,
+        rating AS most_frequent_rating,
+        COUNT(*) AS rating_count,
+        RANK() OVER (PARTITION BY type ORDER BY COUNT(*) DESC) AS rank
+FROM netflix
+GROUP BY 1,2;
 ```
 
 **Objective:** Identify the most frequently occurring rating for each type of content.
 
-### 3. List All Movies Released in a Specific Year (e.g., 2020)
+### 3. List All Movies Released in a Specific Year (e.g., 2021)
 
 ```sql
 SELECT * 
 FROM netflix
-WHERE release_year = 2020;
+WHERE release_year = 2021;
 ```
 
 **Objective:** Retrieve all movies released in a specific year.
@@ -98,7 +84,7 @@ SELECT *
 FROM
 (
     SELECT 
-        UNNEST(STRING_TO_ARRAY(country, ',')) AS country,
+        TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country,
         COUNT(*) AS total_content
     FROM netflix
     GROUP BY 1
@@ -170,26 +156,27 @@ GROUP BY 1;
 
 **Objective:** Count the number of content items in each genre.
 
-### 10.Find each year and the average numbers of content release in India on netflix. 
+### 10.Find each year and the average numbers of content release in France on netflix. 
 return top 5 year with highest avg content release!
 
 ```sql
 SELECT 
-    country,
-    release_year,
-    COUNT(show_id) AS total_release,
-    ROUND(
-        COUNT(show_id)::numeric /
-        (SELECT COUNT(show_id) FROM netflix WHERE country = 'India')::numeric * 100, 2
-    ) AS avg_release
-FROM netflix
-WHERE country = 'India'
-GROUP BY country, release_year
-ORDER BY avg_release DESC
+        EXTRACT(YEAR FROM TO_DATE(date_added, 'Month DD, YYYY')) as year,
+		COUNT(*) as yearly_content,
+		ROUND	
+		(COUNT(*)::numeric/
+		(SELECT COUNT(*) FROM netflix  WHERE country = 'France')::numeric * 100 ,2) as avg_content
+        --TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country
+	
+ FROM netflix
+ WHERE country = 'France'
+ GROUP BY 1
+ ORDER BY 2 DESC
+
 LIMIT 5;
 ```
 
-**Objective:** Calculate and rank years by the average number of content releases by India.
+**Objective:** Calculate and rank years by the average number of content releases by France.
 
 ### 11. List All Movies that are Documentaries
 
@@ -222,17 +209,17 @@ WHERE casts LIKE '%Salman Khan%'
 
 **Objective:** Count the number of movies featuring 'Salman Khan' in the last 10 years.
 
-### 14. Find the Top 10 Actors Who Have Appeared in the Highest Number of Movies Produced in India
+### 14. Find the Top 10 Actors Who Have Appeared in the Highest Number of Movies Produced in France
 
 ```sql
-SELECT 
-    UNNEST(STRING_TO_ARRAY(casts, ',')) AS actor,
-    COUNT(*)
-FROM netflix
-WHERE country = 'India'
-GROUP BY actor
-ORDER BY COUNT(*) DESC
-LIMIT 10;
+ SELECT
+ UNNEST(STRING_TO_ARRAY(casts, ',')) as actors,
+ COUNT(*) AS total_content
+ FROM netflix
+ WHERE country ILIKE '%France%'
+ GROUP BY 1
+ ORDER BY 2 DESC
+
 ```
 
 **Objective:** Identify the top 10 actors with the most appearances in Indian-produced movies.
@@ -240,18 +227,19 @@ LIMIT 10;
 ### 15. Categorize Content Based on the Presence of 'Kill' and 'Violence' Keywords
 
 ```sql
-SELECT 
-    category,
-    COUNT(*) AS content_count
-FROM (
-    SELECT 
-        CASE 
-            WHEN description ILIKE '%kill%' OR description ILIKE '%violence%' THEN 'Bad'
-            ELSE 'Good'
-        END AS category
-    FROM netflix
-) AS categorized_content
-GROUP BY category;
+With contentbased as
+	 (SELECT *,
+	       CASE 
+		   WHEN  description ILIKE '%kill%' OR
+	             description ILIKE '%Violence%' THEN 'Bad Content'
+		         ELSE 'Good Content'	 
+		   END category
+	 FROM netflix)
+
+SELECT category,
+       COUNT(*)
+FROM contentbased
+GROUP BY 1
 ```
 
 **Objective:** Categorize content as 'Bad' if it contains 'kill' or 'violence' and 'Good' otherwise. Count the number of items in each category.
@@ -266,19 +254,4 @@ GROUP BY category;
 This analysis provides a comprehensive view of Netflix's content and can help inform content strategy and decision-making.
 
 
-
-## Author - Zero Analyst
-
-This project is part of my portfolio, showcasing the SQL skills essential for data analyst roles. If you have any questions, feedback, or would like to collaborate, feel free to get in touch!
-
-### Stay Updated and Join the Community
-
-For more content on SQL, data analysis, and other data-related topics, make sure to follow me on social media and join our community:
-
-- **YouTube**: [Subscribe to my channel for tutorials and insights](https://www.youtube.com/@zero_analyst)
-- **Instagram**: [Follow me for daily tips and updates](https://www.instagram.com/zero_analyst/)
-- **LinkedIn**: [Connect with me professionally](https://www.linkedin.com/in/najirr)
-- **Discord**: [Join our community to learn and grow together](https://discord.gg/36h5f2Z5PK)
-
-Thank you for your support, and I look forward to connecting with you!
 
